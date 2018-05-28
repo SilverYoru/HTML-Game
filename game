@@ -1,0 +1,108 @@
+var app ={};
+
+function startApp() {
+    app.backgroundImage = new Image();
+    app.backgroundImage.src="images/Background.jpg";
+    
+    app.difficulty = 1;
+    app.state = "play";
+    app.shipImage = new Image();
+    app.shipImage.src="images/ship.png";
+    app.rockImage = new Image();
+    app.rockImage.src="images/rock.png";
+    app.explosionImage = new Image();
+    app.explosionImage.src = "images/explosion.png";    
+    
+    app.canvas = document.getElementById("canvas");
+    app.LastTime = window.performance.now();
+    window.requestAnimationFrame(frameUpdate);
+    spawnBackground();
+    spawnHero();
+    spawnRock();
+    drawScene();
+    app.canvas.addEventListener("mousemove", myMouseMove, false);
+}
+
+function spawnBackground() {
+    app.background = {
+        position: {x:500, y:500},
+        size: 1000,
+        image: app.backgroundImage
+    }
+}
+
+function spawnHero() {
+    app.hero ={
+        position: {x:400, y:400},
+        size: 60,
+        color:"#FFFF00",
+        image: app.shipImage,
+        drawMe: function(){
+            if(this.state === "exploded") this.image = app.explosionImage;
+            drawObject(this);
+        }
+    }
+}
+function spawnRock() {
+    app.rock = {
+        position: {x: Math.random() * app.canvas.width,  y:Math.random() * -app.canvas.height},
+        size: 120,
+        speed: 150 + 25 * app.difficulty,
+        color:"#FFFFFF",
+        image: app.rockImage,
+        checkHitHero: function(hero) {
+            var distance = getDistance(hero, this);
+            if (distance < 50) {
+                hero.state = "exploded";
+                console.log("Exploded. I died baby!");
+                app.state = "done";
+            }
+        }
+    }
+}
+function drawScene() {
+    app.context = app.canvas.getContext("2d");    
+    drawObject(app.background);
+    //app.background.onload = function () {
+    //    app.context.drawImage(app.background,0,0);
+    //}
+    
+    //app.context.fillStyle = "#000020";
+    //app.context.fillRect(0, 0, app.canvas.width, app.canvas.height);  
+    app.hero.drawMe();
+    drawObject(app.rock);
+    app.rock.checkHitHero(app.hero);
+}
+
+
+function frameUpdate(timestamp) {
+    window.requestAnimationFrame(frameUpdate);
+    var dt = (timestamp - app.LastTime) / 1000;
+    app.LastTime = timestamp;
+    var rock = app.rock;
+    rock.position.y += rock.speed * dt;
+    //console.log(rock.position.y);
+    if ((rock.position.y - rock.size) > app.canvas.height) spawnRock();
+    drawScene();
+    if (app.state === "play") app.difficulty += dt;
+}
+
+function myMouseMove(event){
+    if (app.hero.state != "exploded") {
+        app.hero.position.x = event.clientX;
+        app.hero.position.y = event.clientY;
+    }
+}
+
+function drawObject(object){
+    var context = app.context;
+    context.save();
+    context.translate(object.position.x, object.position.y);
+    context.drawImage(object.image, -object.size/2, -object.size/2, object.size, object.size);
+    context.restore();
+}
+function getDistance(object1, object2) {
+    var dx = object1.position.x - object2.position.x;
+    var dy = object1.position.y - object2.position.y;
+    return Math.sqrt(dx*dx + dy*dy);
+}
